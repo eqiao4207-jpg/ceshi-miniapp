@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getTest, tests } from '../../data/tests'
-import { cloudPaymentAdapter } from '../../services/payment-cloud'
+import { cloudPaymentAdapter, cloudResultAdapter } from '../../services/payment-cloud'
 const title = ref('太阳能量型')
 const testTitle = ref('你的社交电量')
 const report = ref('你不是一直热闹，只是把能量留给值得的人。')
@@ -11,6 +11,9 @@ const showPoster = ref(false)
 const unlocked = ref(false)
 const paying = ref(false)
 const showCoupon = ref(false)
+const showPay = ref(false)
+const resultId = ref('')
+const resultCode = ref('')
 const activeTest = ref(tests[0])
 onLoad((query) => {
   if (!query?.id) return
@@ -19,10 +22,13 @@ onLoad((query) => {
   const totals: Record<string, number> = {}
   test.questions.forEach(question => { const option = question.options[answers[question.id]]; Object.entries(option?.scores || {}).forEach(([key, value]) => { totals[key] = (totals[key] || 0) + value }) })
   const winner = Object.entries(totals).sort((a,b) => b[1] - a[1])[0]?.[0]
+  resultCode.value = winner || 'unknown'
+  try { resultId.value = (await cloudResultAdapter.create(test.id, resultCode.value, answers)).resultId } catch {}
   if (test.id === 'hidden-self') { title.value = winner === 'spark' ? '灵感行动派' : winner === 'nest' ? '安静可靠派' : '温柔观察派'; report.value = '你有自己的节奏，不急着证明什么，却总能在关键时刻给出很稳的回应。' }
   if (test.id === 'love-language') { title.value = winner === 'word' ? '坦率表达型' : winner === 'gift' ? '行动照顾型' : '细节感知型'; report.value = '你表达在乎的方式很具体，真正喜欢一个人时，细节会替你说很多话。' }
   if (test.id === 'aesthetic-mood') { title.value = winner === 'yellow' ? '明亮柠檬黄' : winner === 'blue' ? '安静海盐蓝' : '热烈樱桃红'; report.value = '你正在寻找一种刚刚好的能量，它会从喜欢的颜色里先露出一点头。' }
   unlocked.value = uni.getStorageSync(`unlocked:${test.id}`) === true
+  if (!unlocked.value) showPay.value = true
 })
 const share = () => {
   if (!unlocked.value) return uni.showToast({ title: '先解锁完整报告', icon: 'none' })
@@ -51,7 +57,7 @@ const unlock = async () => {
   const test = tests.find(item => item.title === testTitle.value) || tests[0]
   try {
     const result = await cloudPaymentAdapter.pay({ orderId: `demo_${Date.now()}`, productId: test.id, priceFen: activeTest.value.priceCouponFen || Math.round(Number(activeTest.value.price) * 100) })
-    if (result.success) { unlocked.value = true; uni.setStorageSync(`unlocked:${test.id}`, true); uni.showToast({ title: '报告已解锁', icon: 'success' }) }
+    if (result.success) { if (resultId.value) await cloudResultAdapter.unlock(resultId.value, result.orderId); unlocked.value = true; showPay.value = false; showCoupon.value = false; uni.setStorageSync(`unlocked:${test.id}`, true); uni.showToast({ title: '报告已解锁', icon: 'success' }) }
   } catch { uni.showToast({ title: '订单创建失败，请稍后重试', icon: 'none' }) }
   finally { paying.value = false }
 }

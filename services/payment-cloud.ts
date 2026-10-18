@@ -10,3 +10,13 @@ export const cloudPaymentAdapter = {
     return { success: result.status === 'paid', orderId: result.orderId }
   }
 }
+
+export const cloudResultAdapter = {
+  async create(testId: string, resultCode: string, answers: Record<string, number>) {
+    const response = await uniCloud.callFunction({ name: 'results', data: { action: 'create', testId, resultCode, answers } })
+    return response.result as { resultId: string }
+  },
+  async unlock(resultId: string, orderId: string) {
+    await uniCloud.callFunction({ name: 'results', data: { action: 'unlock', resultId, orderId } })
+  }
+}
