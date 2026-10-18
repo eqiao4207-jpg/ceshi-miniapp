@@ -3,5 +3,6 @@ unpackage/
 .hbuilderx/
 .DS_Store
 server/.env
+admin/cloud-config.js
 server/data/
 *.log

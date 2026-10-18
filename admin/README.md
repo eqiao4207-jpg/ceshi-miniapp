@@ -11,3 +11,5 @@ adminCloud.call('admin-tests')
 ```
 
 管理员 Token 只保存在当前浏览器会话的 `sessionStorage`，不要写入源码或提交 Git。云函数仍会在服务端校验 `ADMIN_TOKEN`。
+
+部署前复制 `cloud-config.example.js` 为 `cloud-config.js`，填写 uniCloud 空间 ID。`cloud-config.js` 已被 `.gitignore` 忽略，不会进入 Git。
