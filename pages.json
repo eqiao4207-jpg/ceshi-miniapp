@@ -4,6 +4,7 @@
 		{ "path": "pages/test/index", "style": { "navigationBarTitleText": "开始测试" } },
 		{ "path": "pages/result/index", "style": { "navigationBarTitleText": "我的结果" } },
 		{ "path": "pages/history/index", "style": { "navigationBarTitleText": "测试记录" } }
+		,{ "path": "pages/admin/index", "style": { "navigationBarTitleText": "管理台" } }
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
