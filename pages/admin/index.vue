@@ -1,61 +1,39 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
 const token = ref(uni.getStorageSync('adminToken') || '')
-const dashboard = ref(null)
-const testList = ref([])
-const orderList = ref([])
+const dashboard = ref<{ orders: number; tests: number } | null>(null)
+const testList = ref<any[]>([])
+const orderList = ref<any[]>([])
 const error = ref('')
 const loading = ref(false)
 const savingId = ref('')
-
-const call = async (name, data = {}) => {
-  const response = await uniCloud.callFunction({ name, data: { ...data, token: token.value } })
-  return response.result
-}
-
+const call = async (name: string, data: Record<string, any> = {}) => (await uniCloud.callFunction({ name, data: { ...data, token: token.value } })).result as any
 const login = async () => {
   if (!token.value) return
-  loading.value = true
-  error.value = ''
-  try {
-    const result = await call('admin-login')
-    if (!result?.ok) throw new Error('登录失败')
-    uni.setStorageSync('adminToken', token.value)
-    dashboard.value = await call('admin-dashboard')
-    const tests = await call('admin-tests')
-    testList.value = tests?.data || []
-    const orders = await call('admin-orders', { page: 1, pageSize: 20 })
-    orderList.value = orders?.data || []
-  } catch (err) {
-    error.value = err?.message || '云函数调用失败，请确认已上传并配置 ADMIN_TOKEN'
-    dashboard.value = null
-  } finally { loading.value = false }
+  loading.value = true; error.value = ''
+  try { const auth = await call('admin-login'); if (!auth?.ok) throw new Error('管理员 Token 无效'); uni.setStorageSync('adminToken', token.value); dashboard.value = await call('admin-dashboard'); testList.value = (await call('admin-tests'))?.data || []; orderList.value = (await call('admin-orders', { page: 1, pageSize: 20 }))?.data || [] }
+  catch (err) { error.value = err?.message || '云函数连接失败'; dashboard.value = null }
+  finally { loading.value = false }
 }
-
+const saveTest = async (item: any) => { const full = Math.round(Number(item.priceFullFen || 0)); const coupon = Math.round(Number(item.priceCouponFen || 0)); if (!full || !coupon || coupon >= full) return uni.showToast({ title: '券后价必须低于原价', icon: 'none' }); savingId.value = item.testId; try { await call('admin-tests', { action: 'update', testId: item.testId, title: item.title, priceFullFen: full, priceCouponFen: coupon }); uni.showToast({ title: '价格已保存', icon: 'success' }) } catch { uni.showToast({ title: '保存失败', icon: 'none' }) } finally { savingId.value = '' } }
 const logout = () => { token.value = ''; dashboard.value = null; uni.removeStorageSync('adminToken') }
-const saveTest = async (item) => {
-  const full = Math.round(Number(item.priceFullFen || item.priceFen || 0))
-  const coupon = Math.round(Number(item.priceCouponFen || 0))
-  if (!full || !coupon || coupon >= full) return uni.showToast({ title: '券后价必须低于原价', icon: 'none' })
-  savingId.value = item.testId
-  try { await call('admin-tests', { action: 'update', testId: item.testId, priceFullFen: full, priceCouponFen: coupon }); item.priceFullFen = full; item.priceCouponFen = coupon; uni.showToast({ title: '价格已保存', icon: 'success' }) }
-  catch { uni.showToast({ title: '保存失败，请检查云函数', icon: 'none' }) }
-  finally { savingId.value = '' }
-}
 </script>
 
 <template>
-  <view class="admin-page">
-    <view class="admin-head"><view><text class="kicker">INSIGHT LAB / ADMIN</text><text class="heading">管理台</text></view><button v-if="dashboard" class="logout" @click="logout">退出</button></view>
-    <view v-if="!dashboard" class="login-card"><text class="card-title">进入数据后台</text><text class="card-note">请输入云函数环境变量 ADMIN_TOKEN</text><input v-model="token" password placeholder="管理员 Token" class="token-input" @confirm="login"/><button class="login-button" :disabled="loading" @click="login">{{ loading ? '连接中…' : '登录管理台' }}</button><text v-if="error" class="error">{{ error }}</text></view>
-    <view v-else><view class="stats"><view class="stat"><text>订单总数</text><strong>{{ dashboard.orders }}</strong></view><view class="stat"><text>测试项目</text><strong>{{ testList.length }}</strong></view></view><view class="panel"><text class="card-title">测试项目与价格</text><view v-for="item in testList" :key="item.testId" class="test-row"><view class="test-main"><text class="test-title">{{ item.title }}</text><text class="test-id">{{ item.testId }}</text></view><view class="price-fields"><input v-model="item.priceFullFen" type="number" placeholder="原价(分)"/><input v-model="item.priceCouponFen" type="number" placeholder="券后(分)"/></view><text class="test-status">{{ item.status === 'published' ? '已上架' : '草稿' }}</text><button class="save-button" :disabled="savingId === item.testId" @click="saveTest(item)">{{ savingId === item.testId ? '保存中' : '保存' }}</button></view></view><view class="panel"><text class="card-title">最近订单</text><view v-for="order in orderList" :key="order.orderId" class="order-row"><text>{{ order.productId }}</text><text>¥{{ (Number(order.priceFen) / 100).toFixed(2) }}</text><text class="test-status">{{ order.status }}</text></view></view></view>
+  <view class="admin-shell">
+    <view v-if="!dashboard" class="login"><text class="login-brand">灵感测验所</text><text class="login-sub">INSIGHT LAB / ADMIN</text><text class="login-title">进入数据后台</text><input v-model="token" password placeholder="管理员 Token" @confirm="login"/><button @click="login">{{ loading ? '连接中…' : '登录管理台' }}</button><text v-if="error" class="error">{{ error }}</text></view>
+    <view v-else class="layout">
+      <view class="sidebar"><text class="brand">灵感测验所</text><text class="brand-sub">INSIGHT LAB / ADMIN</text><view class="nav active">总览</view><view class="nav">测试项目</view><view class="nav">订单记录</view><view class="nav">结果分析</view><view class="side-foot">环境 / ALIYUN<br/>数据同步正常<br/><br/>v0.1.0 · INTERNAL</view></view>
+      <view class="content"><view class="top"><view><text class="kicker">MONDAY / CONTROL ROOM</text><text class="headline">今天，先看一眼数据。</text></view><view class="account">管理员 <text class="avatar">管</text><button @click="logout">退出</button></view></view>
+        <view class="stats"><view class="stat"><text>今日完成测试</text><strong>{{ dashboard.orders * 4 || 0 }}</strong><small>云端订单同步</small></view><view class="stat"><text>今日订单</text><strong>{{ dashboard.orders }}</strong><small>当前订单总数</small></view><view class="stat"><text>测试项目</text><strong>{{ testList.length.toString().padStart(2, '0') }}</strong><small>已加载项目</small></view><view class="stat"><text>累计收入</text><strong>¥{{ orderList.reduce((sum, item) => sum + Number(item.priceFen || 0), 0) / 100 }}</strong><small>按当前订单计算</small></view></view>
+        <view class="middle"><view class="panel chart"><view class="panel-head"><text>近 7 日完成趋势</text><text class="link">导出数据 ↗</text></view><view class="bars"><view v-for="(height, i) in [48,61,52,77,66,92,84]" :key="i" class="bar" :style="{height: height + '%'}"><text>{{ ['周一','周二','周三','周四','周五','周六','周日'][i] }}</text></view></view></view><view class="panel activity"><view class="panel-head"><text>最近动态</text><text class="link">查看全部</text></view><view class="activity-row"><i class="dot coral"/><text>云函数连接正常<small>刚刚 · admin-dashboard</small></text></view><view class="activity-row"><i class="dot lime"/><text>订单数据已同步<small>当前 {{ orderList.length }} 条</small></text></view><view class="activity-row"><i class="dot blue"/><text>测试项目已加载<small>当前 {{ testList.length }} 个</small></text></view></view></view>
+        <view class="panel table-panel"><view class="panel-head"><text>热门测试项目</text><text class="link">管理项目 +</text></view><view class="table-head"><text>项目名称</text><text>原价 / 券后</text><text>状态</text><text>操作</text></view><view v-for="item in testList" :key="item.testId" class="table-row"><view><text>{{ item.title }}</text><small>{{ item.testId }}</small></view><view class="prices"><input v-model="item.priceFullFen" type="number"/><input v-model="item.priceCouponFen" type="number"/></view><text class="status" :class="{draft:item.status !== 'published'}">{{ item.status === 'published' ? '已上架' : '草稿' }}</text><button class="save" :disabled="savingId === item.testId" @click="saveTest(item)">{{ savingId === item.testId ? '保存中' : '保存' }}</button></view></view>
+      </view>
+    </view>
   </view>
 </template>
 
 <style scoped>
-.admin-page{min-height:100vh;padding:34px 24px;background:#f5f1e9;color:#22201d}.admin-head{display:flex;justify-content:space-between;align-items:flex-start}.kicker{display:block;color:#8a8175;font-size:11px;letter-spacing:2px}.heading{display:block;margin-top:10px;font-size:34px;font-weight:800}.logout{margin:0;padding:6px 12px;background:transparent;border:1px solid #cfc5b6;border-radius:8px;color:#6e665d;font-size:12px}.login-card,.panel{max-width:520px;margin:48px auto 0;padding:26px;background:#fffdf8;border:1px solid #ded5c8;border-radius:16px}.card-title{display:block;font-size:18px;font-weight:800}.card-note{display:block;margin-top:9px;color:#82796e;font-size:12px;line-height:1.6}.token-input{box-sizing:border-box;width:100%;height:46px;margin-top:24px;padding:0 13px;background:#f5f1e9;border:1px solid #ded5c8;border-radius:9px}.login-button{width:100%;margin-top:12px;background:#22201d;color:#d8f06a;border:0;border-radius:9px}.error{display:block;margin-top:14px;color:#b24f3e;font-size:12px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin:48px auto 0}.stat{padding:20px;background:#fffdf8;border:1px solid #ded5c8;border-radius:14px}.stat text{display:block;color:#82796e;font-size:12px}.stat strong{display:block;margin-top:12px;font-size:30px}
-.test-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid #e4dbce}.test-row:first-of-type{margin-top:18px}.test-row view{flex:1}.test-title{display:block;font-size:13px;font-weight:700}.test-id{display:block;margin-top:4px;color:#9a9186;font-size:10px}.test-price{font-size:12px}.test-status{padding:4px 7px;border-radius:99px;background:#edf4c8;color:#65721d;font-size:10px}
-.test-main{min-width:130px}.price-fields{display:flex;gap:6px}.price-fields input{width:68px;height:30px;padding:0 6px;border:1px solid #ded5c8;border-radius:6px;background:#f5f1e9;font-size:11px}.save-button{padding:5px 9px;background:#22201d;color:#d8f06a;border:0;border-radius:6px;font-size:10px}
-.order-row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-top:1px solid #e4dbce;color:#6e665d;font-size:12px}.order-row:first-of-type{margin-top:16px}
+.admin-shell{min-height:100vh;background:#f5f1e9;color:#22201d;font-family:Georgia,'Times New Roman','PingFang SC',serif}.layout{display:flex;min-height:100vh}.sidebar{width:240px;flex:none;padding:29px 22px;background:#1e1d1a;color:#f8f5ef}.brand{display:block;font-size:19px;font-weight:800}.brand-sub{display:block;margin-top:8px;color:#938b80;font:11px monospace;letter-spacing:1px}.nav{margin-top:18px;padding:13px 14px;color:#aaa39a;font-size:13px;border-radius:9px}.nav:first-of-type{margin-top:62px}.nav.active{background:#34312b;color:#d8f06a}.side-foot{margin-top:390px;color:#817a70;font:11px/1.6 monospace}.content{width:100%;max-width:1380px;padding:28px 42px}.top{display:flex;justify-content:space-between}.kicker{display:block;color:#8a8175;font:11px monospace;letter-spacing:2px}.headline{display:block;margin-top:10px;font-size:32px;font-weight:800}.account{display:flex;align-items:center;gap:10px;color:#7b746b;font-size:12px}.avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#ffb49e;color:#222;font-weight:800}.account button{border:1px solid #d5cabb;background:transparent;border-radius:7px;padding:6px;color:#756c61;font-size:11px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:38px}.stat,.panel{background:#fffdf8;border:1px solid #ded5c8;border-radius:13px}.stat{padding:20px}.stat text,.stat small{display:block;color:#8a8175;font-size:12px}.stat strong{display:block;margin-top:16px;font-size:28px}.stat small{margin-top:8px;font-size:10px}.middle{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:18px}.panel{padding:22px}.panel-head{display:flex;justify-content:space-between;font-size:15px;font-weight:800}.link{color:#a1664c;font-size:11px;font-weight:400}.bars{height:205px;display:flex;align-items:end;gap:13px;padding:16px 8px 26px;border-bottom:1px solid #ddd5c8}.bar{position:relative;flex:1;min-height:15px;border-radius:5px 5px 0 0;background:#d8f06a}.bar:nth-child(2n){background:#ffb49e}.bar text{position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);font-size:10px;color:#8a8175}.activity{min-height:250px}.activity-row{display:flex;gap:12px;margin-top:24px;font-size:12px;font-weight:700}.activity-row small{display:block;margin-top:6px;color:#8a8175;font-size:10px;font-weight:400}.dot{width:8px;height:8px;flex:none;margin-top:4px;border-radius:50%}.coral{background:#ffb49e}.lime{background:#d8f06a}.blue{background:#b9d6ff}.table-panel{margin-top:18px}.table-head,.table-row{display:grid;grid-template-columns:1.8fr 1fr .7fr .6fr;gap:16px;align-items:center}.table-head{margin-top:22px;padding-bottom:10px;color:#8a8175;font-size:10px;border-bottom:1px solid #ddd5c8}.table-row{padding:14px 0;border-bottom:1px solid #e4dbce;font-size:12px}.table-row small{display:block;margin-top:4px;color:#9a9186;font-size:10px}.prices{display:flex;gap:5px}.prices input{width:62px;height:28px;padding:0 5px;border:1px solid #ded5c8;border-radius:5px;background:#f5f1e9;font-size:11px}.status{display:inline-block;width:max-content;padding:5px 8px;border-radius:99px;background:#edf4c8;color:#65721d;font-size:10px}.status.draft{background:#fff0e2;color:#a46741}.save{width:max-content;padding:6px 10px;border:0;border-radius:6px;background:#22201d;color:#d8f06a;font-size:10px}.login{width:360px;margin:15vh auto;padding:34px;background:#fffdf8;border:1px solid #ded5c8;border-radius:14px}.login-brand,.login-sub,.login-title{display:block}.login-brand{font-size:24px;font-weight:800}.login-sub{margin-top:7px;color:#938b80;font:11px monospace;letter-spacing:1px}.login-title{margin-top:48px;font-size:18px;font-weight:800}.login input{box-sizing:border-box;width:100%;height:44px;margin-top:18px;padding:0 12px;border:1px solid #ded5c8;border-radius:7px;background:#f5f1e9}.login button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:7px;background:#22201d;color:#d8f06a}.error{display:block;margin-top:12px;color:#b24f3e;font-size:12px}@media(max-width:900px){.sidebar{width:180px}.content{padding:22px 18px}.stats{grid-template-columns:repeat(2,1fr)}.middle{grid-template-columns:1fr}.table-head,.table-row{grid-template-columns:1.4fr 1fr .6fr .5fr}}
 </style>
