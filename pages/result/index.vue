@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getTest, tests } from '../../data/tests'
-import { paymentAdapter } from '../../services/payment'
+import { cloudPaymentAdapter } from '../../services/payment-cloud'
 const title = ref('太阳能量型')
 const testTitle = ref('你的社交电量')
 const report = ref('你不是一直热闹，只是把能量留给值得的人。')
@@ -48,7 +48,7 @@ const unlock = async () => {
   paying.value = true
   const test = tests.find(item => item.title === testTitle.value) || tests[0]
   try {
-    const result = await paymentAdapter.pay({ orderId: `demo_${Date.now()}`, productId: test.id, priceFen: Math.round(Number(test.price) * 100) })
+    const result = await cloudPaymentAdapter.pay({ orderId: `demo_${Date.now()}`, productId: test.id, priceFen: Math.round(Number(test.price) * 100) })
     if (result.success) { unlocked.value = true; uni.setStorageSync(`unlocked:${test.id}`, true); uni.showToast({ title: '报告已解锁', icon: 'success' }) }
   } catch { uni.showToast({ title: '订单创建失败，请稍后重试', icon: 'none' }) }
   finally { paying.value = false }
