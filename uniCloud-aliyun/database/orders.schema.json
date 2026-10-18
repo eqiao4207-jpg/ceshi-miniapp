@@ -1,0 +1,13 @@
+{
+  "bsonType": "object",
+  "required": ["orderId", "productId", "priceFen", "status", "createdAt"],
+  "permission": { "read": false, "create": false, "update": false, "delete": false },
+  "properties": {
+    "orderId": { "bsonType": "string", "description": "订单号" },
+    "productId": { "bsonType": "string" },
+    "priceFen": { "bsonType": "int", "minimum": 1 },
+    "status": { "bsonType": "string", "enum": ["pending", "paid", "refunded"] },
+    "createdAt": { "bsonType": "date" },
+    "paidAt": { "bsonType": "date" }
+  }
+}
