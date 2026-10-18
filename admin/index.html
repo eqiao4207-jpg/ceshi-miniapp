@@ -17,4 +17,15 @@
       <section class="panel" style="margin-top:18px"><div class="panel-head"><div class="panel-title">热门测试项目</div><button class="panel-link">管理项目 +</button></div><table class="table"><thead><tr><th>项目名称</th><th>分类</th><th>完成次数</th><th>价格</th><th>状态</th></tr></thead><tbody><tr><td>你的社交电量</td><td>生活方式</td><td>3,841</td><td>¥0.99</td><td><span class="status">已上架</span></td></tr><tr><td>你的隐藏性格</td><td>性格倾向</td><td>2,906</td><td>¥1.99</td><td><span class="status">已上架</span></td></tr><tr><td>你的恋爱沟通风格</td><td>关系灵感</td><td>1,784</td><td>¥2.99</td><td><span class="status">已上架</span></td></tr><tr><td>你的氛围感色彩</td><td>视觉偏好</td><td>1,265</td><td>¥0.99</td><td><span class="status wait">草稿</span></td></tr></tbody></table></section>
     </main>
   </div>
+  <script>
+    // Web Hosting 页面接入 uniCloud Web SDK 后，可通过此入口读取真实管理数据。
+    window.adminCloud = {
+      token: sessionStorage.getItem('adminToken') || '',
+      async call(name, data) {
+        if (!window.uniCloud || typeof window.uniCloud.callFunction !== 'function') return null
+        const response = await window.uniCloud.callFunction({ name, data: { ...(data || {}), token: this.token } })
+        return response.result
+      }
+    }
+  </script>
 </body></html>
