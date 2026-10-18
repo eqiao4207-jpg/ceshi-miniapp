@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const token = ref(uni.getStorageSync('adminToken') || '')
+const cachedToken = uni.getStorageSync('adminToken') || ''
+const cachedExpiry = Number(uni.getStorageSync('adminTokenExpires') || 0)
+const token = ref(cachedExpiry > Date.now() ? cachedToken : '')
 const dashboard = ref<{ orders: number; tests: number } | null>(null)
 const testList = ref<any[]>([])
 const orderList = ref<any[]>([])
@@ -12,12 +14,12 @@ const call = async (name: string, data: Record<string, any> = {}) => (await uniC
 const login = async () => {
   if (!token.value) return
   loading.value = true; error.value = ''
-  try { const auth = await call('admin-login'); if (!auth?.ok) throw new Error('管理员 Token 无效'); uni.setStorageSync('adminToken', token.value); dashboard.value = await call('admin-dashboard'); testList.value = (await call('admin-tests'))?.data || []; orderList.value = (await call('admin-orders', { page: 1, pageSize: 20 }))?.data || [] }
+  try { const auth = await call('admin-login'); if (!auth?.ok) throw new Error('管理员 Token 无效'); uni.setStorageSync('adminToken', token.value); uni.setStorageSync('adminTokenExpires', Date.now() + 7 * 24 * 60 * 60 * 1000); dashboard.value = await call('admin-dashboard'); testList.value = (await call('admin-tests'))?.data || []; orderList.value = (await call('admin-orders', { page: 1, pageSize: 20 }))?.data || [] }
   catch (err) { error.value = err?.message || '云函数连接失败'; dashboard.value = null }
   finally { loading.value = false }
 }
 const saveTest = async (item: any) => { const full = Math.round(Number(item.priceFullFen || 0)); const coupon = Math.round(Number(item.priceCouponFen || 0)); if (!full || !coupon || coupon >= full) return uni.showToast({ title: '券后价必须低于原价', icon: 'none' }); savingId.value = item.testId; try { await call('admin-tests', { action: 'update', testId: item.testId, title: item.title, priceFullFen: full, priceCouponFen: coupon }); uni.showToast({ title: '价格已保存', icon: 'success' }) } catch { uni.showToast({ title: '保存失败', icon: 'none' }) } finally { savingId.value = '' } }
-const logout = () => { token.value = ''; dashboard.value = null; uni.removeStorageSync('adminToken') }
+const logout = () => { token.value = ''; dashboard.value = null; uni.removeStorageSync('adminToken'); uni.removeStorageSync('adminTokenExpires') }
 </script>
 
 <template>
