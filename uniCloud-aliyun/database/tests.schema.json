@@ -1,0 +1,12 @@
+{
+  "bsonType": "object",
+  "required": ["testId", "title", "priceFen", "status", "updatedAt"],
+  "permission": { "read": false, "create": false, "update": false, "delete": false },
+  "properties": {
+    "testId": { "bsonType": "string" },
+    "title": { "bsonType": "string" },
+    "priceFen": { "bsonType": "int", "minimum": 1 },
+    "status": { "bsonType": "string", "enum": ["draft", "published", "offline"] },
+    "updatedAt": { "bsonType": "date" }
+  }
+}
