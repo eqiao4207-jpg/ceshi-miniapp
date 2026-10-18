@@ -6,6 +6,8 @@
     "testId": { "bsonType": "string" },
     "title": { "bsonType": "string" },
     "priceFen": { "bsonType": "int", "minimum": 1 },
+    "priceFullFen": { "bsonType": "int", "minimum": 1 },
+    "priceCouponFen": { "bsonType": "int", "minimum": 1 },
     "status": { "bsonType": "string", "enum": ["draft", "published", "offline"] },
     "updatedAt": { "bsonType": "date" }
   }

@@ -4,6 +4,13 @@ const db = uniCloud.database()
 
 exports.main = async (event) => {
   if (!process.env.ADMIN_TOKEN || event?.token !== process.env.ADMIN_TOKEN) throw new Error('admin_unauthorized')
+  if (event.action === 'update') {
+    const priceFullFen = Number(event.priceFullFen)
+    const priceCouponFen = Number(event.priceCouponFen)
+    if (!event.testId || !Number.isInteger(priceFullFen) || !Number.isInteger(priceCouponFen) || priceCouponFen >= priceFullFen) throw new Error('invalid_price')
+    await db.collection('tests').where({ testId: event.testId }).update({ priceFullFen, priceCouponFen, updatedAt: new Date() })
+    return { ok: true, testId: event.testId, priceFullFen, priceCouponFen }
+  }
   const result = await db.collection('tests').orderBy('updatedAt', 'desc').get()
   if (result.data.length) return { data: result.data }
   return { data: [
