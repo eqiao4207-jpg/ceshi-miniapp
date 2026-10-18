@@ -1,0 +1,11 @@
+page { background: #f8f5ef; color: #1d1b19; font-family: Georgia, 'Times New Roman', serif; }
+.page { min-height: 100vh; padding: 26px 22px 40px; }
+.sans { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; }
+.muted { color: #817a70; }
+.eyebrow { font: 700 11px/1.2 -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; letter-spacing: 2px; text-transform: uppercase; }
+.button { border: 0; border-radius: 14px; padding: 15px 20px; font: 700 14px -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; }
+.button.primary { color: #fffdf8; background: #1d1b19; }
+.button.accent { color: #1d1b19; background: #d8f06a; }
+.pill { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; background:#ece7dd; color:#6c665c; font:600 11px -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif; }
+.fade-up { animation: fadeUp .55s ease both; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:none } }
